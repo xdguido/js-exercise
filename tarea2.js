@@ -79,16 +79,44 @@ class Carrito {
     async agregarProducto(sku, cantidad) {
         console.log(`Agregando ${cantidad} ${sku}`);
 
-        // Busco el producto en la "base de datos"
-        const producto = await findProductBySku(sku);
+        // buscar en db. necesario para consultar precio o crear producto nuevo en el carrito
+        findProductBySku(sku)
+            .then((producto) => {
+                console.log('Producto encontrado', producto);
+                // buscar en el carrito
+                const productIndex = this.productos.findIndex((product) => product.sku === sku);
+                // el producto existe en el carrito
+                if (productIndex !== -1) {
+                    // crear copia del producto. approach para evitar mutacion
+                    const updatedProduct = { ...this.productos[productIndex] };
+                    // actualizar cantidad del producto
+                    updatedProduct.cantidad += cantidad;
+                    // crear copia del carrito con el producto actualizado
+                    const updatedCart = [...this.productos];
+                    updatedCart[productIndex] = updatedProduct;
+                    this.productos = updatedCart;
 
-        console.log('Producto encontrado', producto);
-
-        // Creo un producto nuevo
-        const nuevoProducto = new ProductoEnCarrito(sku, producto.nombre, cantidad);
-        this.productos.push(nuevoProducto);
-        this.precioTotal = this.precioTotal + producto.precio * cantidad;
-        this.categorias.push(producto.categoria);
+                    this.precioTotal = this.precioTotal + producto.precio * updatedProduct.cantidad;
+                    console.log('Producto actualizado con exito', updatedProduct);
+                    console.log('Nuevo carrito: ' + JSON.stringify(this.productos));
+                } else {
+                    // Creo un producto nuevo
+                    const nuevoProducto = new ProductoEnCarrito(sku, producto.nombre, cantidad);
+                    this.productos.push(nuevoProducto);
+                    this.precioTotal = this.precioTotal + producto.precio * cantidad;
+                    console.log('Producto creado con exito', nuevoProducto);
+                    console.log('Nuevo carrito: ' + JSON.stringify(this.productos));
+                }
+                const isCategoryInCart = this.categorias.some(
+                    (categoria) => categoria === producto.categoria
+                );
+                if (!isCategoryInCart) {
+                    this.categorias.push(producto.categoria);
+                }
+            })
+            .catch((err) => {
+                console.log(err);
+            });
     }
 }
 
@@ -121,3 +149,5 @@ function findProductBySku(sku) {
 
 const carrito = new Carrito();
 carrito.agregarProducto('WE328NJ', 2);
+carrito.agregarProducto('WE328NJ', 4);
+carrito.agregarProducto('WE328NJdummy', 2);
