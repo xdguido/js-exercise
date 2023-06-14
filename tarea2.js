@@ -134,13 +134,16 @@ class Carrito {
                         const updatedProduct = { ...this.productos[productIndex] };
                         // actualizar cantidad del producto
                         updatedProduct.cantidad -= cantidad;
-                        debugger;
                         // crear copia del carrito con el producto actualizado
                         const updatedCart = [...this.productos];
+                        const previousAmount = this.productos[productIndex].cantidad;
 
                         if (updatedProduct.cantidad > 0) {
-                            // actualizar cantidad del producto
-                            this.precioTotal = this.precioTotal - producto.precio * cantidad;
+                            // actualizar cantidad del producto asegurando tener el ultimo precio de la base de datos
+                            this.precioTotal =
+                                this.precioTotal -
+                                producto.precio * previousAmount +
+                                producto.precio * updatedProduct.cantidad;
 
                             updatedCart[productIndex] = updatedProduct;
                             this.productos = updatedCart;
@@ -149,8 +152,7 @@ class Carrito {
                             resolve(updatedCart);
                         } else {
                             // eliminar el producto del carrito
-                            const currentAmount = this.productos[productIndex].cantidad;
-                            this.precioTotal = this.precioTotal - producto.precio * currentAmount;
+                            this.precioTotal = this.precioTotal - producto.precio * previousAmount;
 
                             updatedCart.filter((product) => product.sku !== sku);
                             this.productos = updatedCart;
