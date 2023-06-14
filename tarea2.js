@@ -118,6 +118,53 @@ class Carrito {
                 console.log(err);
             });
     }
+
+    /**
+     * función que elimina @{cantidad} de productos con @{sku} del carrito
+     */
+    eliminarProducto(sku, cantidad) {
+        return new Promise((resolve, reject) => {
+            findProductBySku(sku)
+                .then((producto) => {
+                    // buscar en el carrito
+                    const productIndex = this.productos.findIndex((product) => product.sku === sku);
+                    // el producto existe en el carrito
+                    if (productIndex !== -1) {
+                        // crear copia del producto. approach para evitar mutacion
+                        const updatedProduct = { ...this.productos[productIndex] };
+                        // actualizar cantidad del producto
+                        updatedProduct.cantidad -= cantidad;
+                        debugger;
+                        // crear copia del carrito con el producto actualizado
+                        const updatedCart = [...this.productos];
+
+                        if (updatedProduct.cantidad > 0) {
+                            this.precioTotal = this.precioTotal - producto.precio * cantidad;
+
+                            updatedCart[productIndex] = updatedProduct;
+                            this.productos = updatedCart;
+
+                            console.log('Producto actualizado con exito', updatedProduct);
+                            resolve(updatedCart);
+                        } else {
+                            const currentAmount = this.productos[productIndex].cantidad;
+                            this.precioTotal = this.precioTotal - producto.precio * currentAmount;
+
+                            updatedCart.filter((product) => product.sku !== sku);
+                            this.productos = updatedCart;
+
+                            console.log('Producto eliminado con exito', updatedProduct);
+                            resolve(updatedCart);
+                        }
+                    } else {
+                        reject(`Product ${sku} not found in Cart`);
+                    }
+                })
+                .catch((err) => {
+                    reject(err);
+                });
+        });
+    }
 }
 
 // Cada producto que se agrega al carrito es creado con esta clase
@@ -141,7 +188,7 @@ function findProductBySku(sku) {
             if (foundProduct) {
                 resolve(foundProduct);
             } else {
-                reject(`Product ${sku} not found`);
+                reject(`Product ${sku} not found in DB`);
             }
         }, 1500);
     });
@@ -151,3 +198,21 @@ const carrito = new Carrito();
 carrito.agregarProducto('WE328NJ', 2);
 carrito.agregarProducto('WE328NJ', 4);
 carrito.agregarProducto('WE328NJdummy', 2);
+carrito
+    .eliminarProducto('WE328NJ', 2)
+    .then((cart) => {
+        console.log('Nuevo carrito:' + JSON.stringify(cart));
+    })
+    .catch((err) => console.log(err));
+carrito
+    .eliminarProducto('KS944RUR', 2)
+    .then((cart) => {
+        console.log('Nuevo carrito:' + JSON.stringify(cart));
+    })
+    .catch((err) => console.log(err));
+carrito
+    .eliminarProducto('WE328NJdummy', 2)
+    .then((cart) => {
+        console.log('Nuevo carrito:' + JSON.stringify(cart));
+    })
+    .catch((err) => console.log(err));
