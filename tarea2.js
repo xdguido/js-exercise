@@ -139,6 +139,7 @@ class Carrito {
                         const updatedCart = [...this.productos];
 
                         if (updatedProduct.cantidad > 0) {
+                            // actualizar cantidad del producto
                             this.precioTotal = this.precioTotal - producto.precio * cantidad;
 
                             updatedCart[productIndex] = updatedProduct;
@@ -147,13 +148,14 @@ class Carrito {
                             console.log('Producto actualizado con exito', updatedProduct);
                             resolve(updatedCart);
                         } else {
+                            // eliminar el producto del carrito
                             const currentAmount = this.productos[productIndex].cantidad;
                             this.precioTotal = this.precioTotal - producto.precio * currentAmount;
 
                             updatedCart.filter((product) => product.sku !== sku);
                             this.productos = updatedCart;
 
-                            console.log('Producto eliminado con exito', updatedProduct);
+                            console.log('Producto eliminado con exito', updatedProduct.sku);
                             resolve(updatedCart);
                         }
                     } else {
@@ -194,22 +196,36 @@ function findProductBySku(sku) {
     });
 }
 
+// crea instancia del carrito
 const carrito = new Carrito();
+// crea nuevo producto en el carrito
 carrito.agregarProducto('WE328NJ', 2);
+// actualiza la cantidad del producto en el carrito
 carrito.agregarProducto('WE328NJ', 4);
+// error. no se encuentra el product en la base de datos
 carrito.agregarProducto('WE328NJdummy', 2);
+// reduce la cantidad del producto en 2
 carrito
     .eliminarProducto('WE328NJ', 2)
     .then((cart) => {
         console.log('Nuevo carrito:' + JSON.stringify(cart));
     })
     .catch((err) => console.log(err));
+// elimina el producto del carrito
+carrito
+    .eliminarProducto('WE328NJ', 20)
+    .then((cart) => {
+        console.log('Nuevo carrito:' + JSON.stringify(cart));
+    })
+    .catch((err) => console.log(err));
+// error. no se encuentra el producto en el carrito
 carrito
     .eliminarProducto('KS944RUR', 2)
     .then((cart) => {
         console.log('Nuevo carrito:' + JSON.stringify(cart));
     })
     .catch((err) => console.log(err));
+// error. no se encuentra el producto en la base de datos
 carrito
     .eliminarProducto('WE328NJdummy', 2)
     .then((cart) => {
