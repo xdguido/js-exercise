@@ -79,50 +79,48 @@ class Carrito {
     async agregarProducto(sku, cantidad) {
         console.log(`Agregando ${cantidad} ${sku}`);
 
-        // buscar en db. necesario para consultar precio o crear producto nuevo en el carrito
-        findProductBySku(sku)
-            .then((producto) => {
-                console.log('Producto encontrado', producto);
-                // buscar en el carrito
-                const productIndex = this.productos.findIndex((product) => product.sku === sku);
-                // crear copia del producto. approach para evitar mutacion
-                const updatedProduct = { ...this.productos[productIndex] };
-                // crear copia del carrito con el producto
-                const updatedProductsInCart = [...this.productos];
+        try {
+            const producto = await findProductBySku(sku);
 
+            const productIndex = this.productos.findIndex((product) => product.sku === sku);
+            // crear copia del producto y productos en el carrito. approach para evitar mutacion
+            const updatedProduct = productIndex !== -1 ? { ...this.productos[productIndex] } : null;
+            const updatedProductsInCart = [...this.productos];
+
+            if (updatedProduct) {
                 // el producto existe en el carrito
-                if (productIndex !== -1) {
-                    // actualizar cantidad del producto
-                    updatedProduct.cantidad += cantidad;
-                    updatedProductsInCart[productIndex] = updatedProduct;
+                updatedProduct.cantidad += cantidad;
+                updatedProductsInCart[productIndex] = updatedProduct;
+            } else {
+                // el producto no existe en el carrito
+                const nuevoProducto = new ProductoEnCarrito(sku, producto.nombre, cantidad);
+                updatedProductsInCart.push(nuevoProducto);
+            }
 
-                    this.productos = updatedProductsInCart;
-                    this.precioTotal = this.precioTotal + producto.precio * cantidad;
-                    console.log('Producto actualizado con exito', updatedProduct);
-                    console.log('Nuevo carrito: ' + JSON.stringify(this.productos));
-                } else {
-                    // crear un producto nuevo
-                    const nuevoProducto = new ProductoEnCarrito(sku, producto.nombre, cantidad);
-                    updatedProductsInCart.push(nuevoProducto);
-                    // agregar categoria
-                    const updatedCategories = [...this.categorias];
-                    const isCategoryInCart = updatedCategories.some(
-                        (categoria) => categoria === producto.categoria
-                    );
-                    if (!isCategoryInCart) {
-                        updatedCategories.push(producto.categoria);
-                    }
+            this.updateCart(updatedProductsInCart, producto.precio, producto.categoria, cantidad);
+        } catch (error) {
+            console.log(error);
+        }
+    }
 
-                    this.productos = updatedProductsInCart;
-                    this.categorias = updatedCategories;
-                    this.precioTotal = this.precioTotal + producto.precio * cantidad;
-                    console.log('Producto creado con exito', nuevoProducto);
-                    console.log('Nuevo carrito: ' + JSON.stringify(this.productos));
-                }
-            })
-            .catch((err) => {
-                console.log(err);
-            });
+    /**
+     * función privada que actualiza el carrito
+     */
+    updateCart(updatedProducts, productPrice, productCategory, quantity) {
+        // actualizar categorias
+        const updatedCategories = [...this.categorias];
+        const isCategoryInCart = updatedCategories.some(
+            (categoria) => categoria === productCategory
+        );
+        if (!isCategoryInCart) {
+            updatedCategories.push(productCategory);
+        }
+
+        // actualizar el resto del carrito
+        this.productos = updatedProducts;
+        this.categorias = updatedCategories;
+        this.precioTotal += productPrice * quantity;
+        console.log('Nuevo carrito: ' + JSON.stringify(this.productos));
     }
 
     /**
