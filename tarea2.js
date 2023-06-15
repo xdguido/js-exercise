@@ -96,7 +96,7 @@ class Carrito {
                     updatedCart[productIndex] = updatedProduct;
                     this.productos = updatedCart;
 
-                    this.precioTotal = this.precioTotal + producto.precio * updatedProduct.cantidad;
+                    this.precioTotal = this.precioTotal + producto.precio * cantidad;
                     console.log('Producto actualizado con exito', updatedProduct);
                     console.log('Nuevo carrito: ' + JSON.stringify(this.productos));
                 } else {
