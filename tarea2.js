@@ -100,7 +100,7 @@ class Carrito {
                     console.log('Producto actualizado con exito', updatedProduct);
                     console.log('Nuevo carrito: ' + JSON.stringify(this.productos));
                 } else {
-                    // Creo un producto nuevo
+                    // crear un producto nuevo
                     const nuevoProducto = new ProductoEnCarrito(sku, producto.nombre, cantidad);
                     this.productos.push(nuevoProducto);
                     this.precioTotal = this.precioTotal + producto.precio * cantidad;
@@ -139,11 +139,8 @@ class Carrito {
                         const previousAmount = this.productos[productIndex].cantidad;
 
                         if (updatedProduct.cantidad > 0) {
-                            // actualizar cantidad del producto asegurando tener el ultimo precio de la base de datos
-                            this.precioTotal =
-                                this.precioTotal -
-                                producto.precio * previousAmount +
-                                producto.precio * updatedProduct.cantidad;
+                            // actualizar cantidad del producto
+                            this.precioTotal = this.precioTotal - producto.precio * cantidad;
 
                             updatedCart[productIndex] = updatedProduct;
                             this.productos = updatedCart;
