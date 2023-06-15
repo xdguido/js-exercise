@@ -85,33 +85,39 @@ class Carrito {
                 console.log('Producto encontrado', producto);
                 // buscar en el carrito
                 const productIndex = this.productos.findIndex((product) => product.sku === sku);
+                // crear copia del producto. approach para evitar mutacion
+                const updatedProduct = { ...this.productos[productIndex] };
+                // crear copia del carrito con el producto
+                const updatedProductsInCart = [...this.productos];
+
                 // el producto existe en el carrito
                 if (productIndex !== -1) {
-                    // crear copia del producto. approach para evitar mutacion
-                    const updatedProduct = { ...this.productos[productIndex] };
                     // actualizar cantidad del producto
                     updatedProduct.cantidad += cantidad;
-                    // crear copia del carrito con el producto actualizado
-                    const updatedCart = [...this.productos];
-                    updatedCart[productIndex] = updatedProduct;
-                    this.productos = updatedCart;
+                    updatedProductsInCart[productIndex] = updatedProduct;
 
+                    this.productos = updatedProductsInCart;
                     this.precioTotal = this.precioTotal + producto.precio * cantidad;
                     console.log('Producto actualizado con exito', updatedProduct);
                     console.log('Nuevo carrito: ' + JSON.stringify(this.productos));
                 } else {
                     // crear un producto nuevo
                     const nuevoProducto = new ProductoEnCarrito(sku, producto.nombre, cantidad);
-                    this.productos.push(nuevoProducto);
+                    updatedProductsInCart.push(nuevoProducto);
+                    // agregar categoria
+                    const updatedCategories = [...this.categorias];
+                    const isCategoryInCart = updatedCategories.some(
+                        (categoria) => categoria === producto.categoria
+                    );
+                    if (!isCategoryInCart) {
+                        updatedCategories.push(producto.categoria);
+                    }
+
+                    this.productos = updatedProductsInCart;
+                    this.categorias = updatedCategories;
                     this.precioTotal = this.precioTotal + producto.precio * cantidad;
                     console.log('Producto creado con exito', nuevoProducto);
                     console.log('Nuevo carrito: ' + JSON.stringify(this.productos));
-                }
-                const isCategoryInCart = this.categorias.some(
-                    (categoria) => categoria === producto.categoria
-                );
-                if (!isCategoryInCart) {
-                    this.categorias.push(producto.categoria);
                 }
             })
             .catch((err) => {
@@ -135,27 +141,38 @@ class Carrito {
                         // actualizar cantidad del producto
                         updatedProduct.cantidad -= cantidad;
                         // crear copia del carrito con el producto actualizado
-                        const updatedCart = [...this.productos];
+                        const updatedProductsInCart = [...this.productos];
                         const previousAmount = this.productos[productIndex].cantidad;
 
                         if (updatedProduct.cantidad > 0) {
                             // actualizar cantidad del producto
                             this.precioTotal = this.precioTotal - producto.precio * cantidad;
 
-                            updatedCart[productIndex] = updatedProduct;
-                            this.productos = updatedCart;
+                            updatedProductsInCart[productIndex] = updatedProduct;
+                            this.productos = updatedProductsInCart;
 
                             console.log('Producto actualizado con exito', updatedProduct);
-                            resolve(updatedCart);
+                            resolve(updatedProductsInCart);
                         } else {
                             // eliminar el producto del carrito
                             this.precioTotal = this.precioTotal - producto.precio * previousAmount;
 
-                            updatedCart.filter((product) => product.sku !== sku);
-                            this.productos = updatedCart;
+                            updatedProductsInCart.filter((product) => product.sku !== sku);
 
+                            // remover categoria
+                            const updatedCategories = [...this.categorias];
+                            const keepCategory = updatedProductsInCart.some(
+                                (product) => product.categoria === producto.categoria
+                            );
+                            if (!keepCategory) {
+                                updatedCategories.filter(
+                                    (categorias) => categorias !== producto.categoria
+                                );
+                            }
+                            this.productos = updatedProductsInCart;
+                            this.categorias = updatedCategories;
                             console.log('Producto eliminado con exito', updatedProduct.sku);
-                            resolve(updatedCart);
+                            resolve(updatedProductsInCart);
                         }
                     } else {
                         reject(`Product ${sku} not found in Cart`);
