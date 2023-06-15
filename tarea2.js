@@ -128,58 +128,80 @@ class Carrito {
      */
     eliminarProducto(sku, cantidad) {
         return new Promise((resolve, reject) => {
-            findProductBySku(sku)
-                .then((producto) => {
-                    // buscar en el carrito
-                    const productIndex = this.productos.findIndex((product) => product.sku === sku);
-                    // el producto existe en el carrito
-                    if (productIndex !== -1) {
-                        // crear copia del producto. approach para evitar mutacion
-                        const updatedProduct = { ...this.productos[productIndex] };
-                        // actualizar cantidad del producto
-                        updatedProduct.cantidad -= cantidad;
-                        // crear copia del carrito con el producto actualizado
-                        const updatedProductsInCart = [...this.productos];
-                        const previousAmount = this.productos[productIndex].cantidad;
+            (async () => {
+                try {
+                    const producto = await findProductBySku(sku);
+                    // actualizar la cantidad de producto de ser posible
+                    const updatedProduct = await this.updateProductInCart(sku, cantidad, producto);
 
-                        if (updatedProduct.cantidad > 0) {
-                            // actualizar cantidad del producto
-                            this.precioTotal = this.precioTotal - producto.precio * cantidad;
-
-                            updatedProductsInCart[productIndex] = updatedProduct;
-                            this.productos = updatedProductsInCart;
-
-                            console.log('Producto actualizado con exito', updatedProduct);
-                            resolve(updatedProductsInCart);
-                        } else {
-                            // eliminar el producto del carrito
-                            this.precioTotal = this.precioTotal - producto.precio * previousAmount;
-
-                            updatedProductsInCart.filter((product) => product.sku !== sku);
-
-                            // remover categoria
-                            const updatedCategories = [...this.categorias];
-                            const keepCategory = updatedProductsInCart.some(
-                                (product) => product.categoria === producto.categoria
-                            );
-                            if (!keepCategory) {
-                                updatedCategories.filter(
-                                    (categorias) => categorias !== producto.categoria
-                                );
-                            }
-                            this.productos = updatedProductsInCart;
-                            this.categorias = updatedCategories;
-                            console.log('Producto eliminado con exito', updatedProduct.sku);
-                            resolve(updatedProductsInCart);
-                        }
+                    if (updatedProduct) {
+                        resolve(this.productos);
                     } else {
-                        reject(`Product ${sku} not found in Cart`);
+                        // eliminar el producto del carrito
+                        resolve(this.removeProductFromCart(sku, producto));
                     }
-                })
-                .catch((err) => {
+                } catch (err) {
                     reject(err);
-                });
+                }
+            })();
         });
+    }
+
+    /**
+     * función que actualiza @{cantidad}, @{precioTotal} del producto @{sku} en el carrito de ser posible
+     */
+    async updateProductInCart(sku, cantidad, producto) {
+        const productIndex = this.productos.findIndex((product) => product.sku === sku);
+        const updatedProduct = productIndex !== -1 ? { ...this.productos[productIndex] } : null;
+
+        if (updatedProduct) {
+            updatedProduct.cantidad -= cantidad;
+            const updatedProductsInCart = [...this.productos];
+
+            if (updatedProduct.cantidad > 0) {
+                // si la cantidad actualizada es mayor a cero, se actualiza el producto con la nueva cantidad
+                const updatedPrecioTotal = this.precioTotal - producto.precio * cantidad;
+                updatedProductsInCart[productIndex] = updatedProduct;
+                this.precioTotal = updatedPrecioTotal;
+                this.productos = updatedProductsInCart;
+                console.log('Producto actualizado con exito', updatedProduct);
+                return updatedProduct;
+            } else {
+                return null;
+            }
+        } else {
+            throw new Error(`Product ${sku} not found in Cart`);
+        }
+    }
+
+    /**
+     * función que elimina el producto @{sku} del carrito
+     */
+    removeProductFromCart(sku, producto) {
+        const productIndex = this.productos.findIndex((product) => product.sku === sku);
+
+        if (productIndex !== -1) {
+            const updatedProductsInCart = [...this.productos];
+            const previousAmount = this.productos[productIndex].cantidad;
+            const updatedPrecioTotal = this.precioTotal - producto.precio * previousAmount;
+            updatedProductsInCart.splice(productIndex, 1);
+
+            // remover la categoria del producto dinamicamente
+            const keepCategory = updatedProductsInCart.some(
+                (product) => product.categoria === producto.categoria
+            );
+            const updatedCategories = keepCategory
+                ? this.categorias
+                : this.categorias.filter((category) => category !== producto.categoria);
+
+            this.precioTotal = updatedPrecioTotal;
+            this.categorias = updatedCategories;
+            this.productos = updatedProductsInCart;
+            console.log('Producto eliminado con exito', sku);
+            return updatedProductsInCart;
+        } else {
+            throw new Error(`Product ${sku} not found in Cart`);
+        }
     }
 }
 
