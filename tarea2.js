@@ -73,6 +73,42 @@ class Carrito {
         this.categorias = [];
     }
 
+    async actualizarPrecios() {
+        try {
+            const productoActualizado = await Promise.all(
+                this.productos.map((producto) => {
+                    const { precio } = findProductBySku(producto.sku);
+                    return { precio, ...producto.cantidad };
+                })
+            );
+            const precioTotal = productoActualizado.reduce(
+                (total, producto) => total + producto.precio * producto.cantidad,
+                0
+            );
+            this.precioTotal = precioTotal;
+            console.log('Precio actualizado con exito');
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
+    actualizarCategorias() {
+        try {
+            const categoriasActualizadas = [];
+
+            for (const producto of this.productos) {
+                if (!categoriasActualizadas.includes(producto.categoria)) {
+                    categoriasActualizadas.push(producto.categoria);
+                }
+            }
+
+            this.categorias = categoriasActualizadas;
+            console.log('Categorias actualizadas con exito');
+        } catch (err) {
+            console.error(err);
+        }
+    }
+
     /**
      * función que agrega @{cantidad} de productos con @{sku} al carrito
      */
@@ -81,7 +117,6 @@ class Carrito {
 
         try {
             const producto = await findProductBySku(sku);
-
             const productIndex = this.productos.findIndex((product) => product.sku === sku);
             // crear copia del producto y productos en el carrito. approach para evitar mutacion
             const updatedProduct = productIndex !== -1 ? { ...this.productos[productIndex] } : null;
@@ -97,7 +132,7 @@ class Carrito {
                 updatedProductsInCart.push(nuevoProducto);
             }
 
-            this.updateCart(updatedProductsInCart, producto.precio, producto.categoria, cantidad);
+            await this.updateCart(updatedProductsInCart);
         } catch (error) {
             console.log(error);
         }
@@ -106,20 +141,13 @@ class Carrito {
     /**
      * función privada que actualiza el carrito
      */
-    updateCart(updatedProducts, productPrice, productCategory, quantity) {
-        // actualizar categorias
-        const updatedCategories = [...this.categorias];
-        const isCategoryInCart = updatedCategories.some(
-            (categoria) => categoria === productCategory
-        );
-        if (!isCategoryInCart) {
-            updatedCategories.push(productCategory);
-        }
-
+    async updateCart(updatedProducts) {
         // actualizar el resto del carrito
         this.productos = updatedProducts;
-        this.categorias = updatedCategories;
-        this.precioTotal += productPrice * quantity;
+        // actualizar precios
+        await this.actualizarPrecios();
+        // actualizar categorias
+        this.actualizarCategorias();
         console.log('Nuevo carrito: ' + JSON.stringify(this.productos));
     }
 
@@ -130,15 +158,14 @@ class Carrito {
         return new Promise((resolve, reject) => {
             (async () => {
                 try {
-                    const producto = await findProductBySku(sku);
                     // actualizar la cantidad de producto de ser posible
-                    const updatedProduct = await this.updateProductInCart(sku, cantidad, producto);
+                    const updatedProduct = await this.updateProductInCart(sku, cantidad);
 
                     if (updatedProduct) {
                         resolve(this.productos);
                     } else {
                         // eliminar el producto del carrito
-                        resolve(this.removeProductFromCart(sku, producto));
+                        resolve(await this.removeProductFromCart(sku));
                     }
                 } catch (err) {
                     reject(err);
@@ -150,22 +177,23 @@ class Carrito {
     /**
      * función que actualiza @{cantidad}, @{precioTotal} del producto @{sku} en el carrito de ser posible
      */
-    async updateProductInCart(sku, cantidad, producto) {
+    async updateProductInCart(sku, cantidad) {
         const productIndex = this.productos.findIndex((product) => product.sku === sku);
-        const updatedProduct = productIndex !== -1 ? { ...this.productos[productIndex] } : null;
+        const updatedProductInCart =
+            productIndex !== -1 ? { ...this.productos[productIndex] } : null;
 
-        if (updatedProduct) {
-            updatedProduct.cantidad -= cantidad;
+        if (updatedProductInCart) {
+            updatedProductInCart.cantidad -= cantidad;
             const updatedProductsInCart = [...this.productos];
 
-            if (updatedProduct.cantidad > 0) {
+            if (updatedProductInCart.cantidad > 0) {
                 // si la cantidad actualizada es mayor a cero, se actualiza el producto con la nueva cantidad
-                const updatedPrecioTotal = this.precioTotal - producto.precio * cantidad;
-                updatedProductsInCart[productIndex] = updatedProduct;
-                this.precioTotal = updatedPrecioTotal;
+                updatedProductsInCart[productIndex] = updatedProductInCart;
                 this.productos = updatedProductsInCart;
-                console.log('Producto actualizado con exito', updatedProduct);
-                return updatedProduct;
+                // actualizar precio
+                await this.actualizarPrecios();
+                console.log('Producto actualizado con exito', updatedProductInCart);
+                return updatedProductInCart;
             } else {
                 return null;
             }
@@ -177,26 +205,18 @@ class Carrito {
     /**
      * función que elimina el producto @{sku} del carrito
      */
-    removeProductFromCart(sku, producto) {
+    async removeProductFromCart(sku) {
         const productIndex = this.productos.findIndex((product) => product.sku === sku);
 
         if (productIndex !== -1) {
             const updatedProductsInCart = [...this.productos];
-            const previousAmount = this.productos[productIndex].cantidad;
-            const updatedPrecioTotal = this.precioTotal - producto.precio * previousAmount;
             updatedProductsInCart.splice(productIndex, 1);
 
-            // remover la categoria del producto dinamicamente
-            const keepCategory = updatedProductsInCart.some(
-                (product) => product.categoria === producto.categoria
-            );
-            const updatedCategories = keepCategory
-                ? this.categorias
-                : this.categorias.filter((category) => category !== producto.categoria);
-
-            this.precioTotal = updatedPrecioTotal;
-            this.categorias = updatedCategories;
             this.productos = updatedProductsInCart;
+            // actualizar precios
+            await this.actualizarPrecios();
+            // actualizar categorias
+            this.actualizarCategorias();
             console.log('Producto eliminado con exito', sku);
             return updatedProductsInCart;
         } else {
