@@ -108,31 +108,27 @@ class Carrito {
     eliminarProducto(sku, cantidad) {
         return new Promise((resolve, reject) => {
             (async () => {
-                try {
-                    // actualizar la cantidad de producto de ser posible
-                    const productIndex = this.productos.findIndex((product) => product.sku === sku);
-                    const updatedProductInCart =
-                        productIndex !== -1 ? { ...this.productos[productIndex] } : null;
+                // actualizar la cantidad de producto de ser posible
+                const productIndex = this.productos.findIndex((product) => product.sku === sku);
+                const updatedProductInCart =
+                    productIndex !== -1 ? { ...this.productos[productIndex] } : null;
 
-                    if (updatedProductInCart) {
-                        updatedProductInCart.cantidad -= cantidad;
-                        const updatedProductsInCart = [...this.productos];
+                if (updatedProductInCart) {
+                    updatedProductInCart.cantidad -= cantidad;
+                    const updatedProductsInCart = [...this.productos];
 
-                        if (updatedProductInCart.cantidad > 0) {
-                            // si la cantidad actualizada es mayor a cero, se actualiza el producto con la nueva cantidad
-                            updatedProductsInCart[productIndex] = updatedProductInCart;
-                            await this.updateCart(updatedProductsInCart);
-                            console.log('Producto actualizado con exito', updatedProductInCart);
-                            resolve(updatedProductsInCart);
-                        } else {
-                            // si la cantidad actualizada es mayor a cero, eliminar el producto del carrito
-                            resolve(await this.removeProductFromCart(productIndex));
-                        }
+                    if (updatedProductInCart.cantidad > 0) {
+                        // si la cantidad actualizada es mayor a cero, se actualiza el producto con la nueva cantidad
+                        updatedProductsInCart[productIndex] = updatedProductInCart;
+                        await this.updateCart(updatedProductsInCart);
+                        console.log('Producto actualizado con exito', updatedProductInCart);
+                        resolve(updatedProductsInCart);
                     } else {
-                        throw new Error(`Product ${sku} not found in Cart`);
+                        // si la cantidad actualizada es mayor a cero, eliminar el producto del carrito
+                        resolve(await this.removeProductFromCart(productIndex));
                     }
-                } catch (err) {
-                    reject(err);
+                } else {
+                    reject(`Product ${sku} not found in Cart`);
                 }
             })();
         });
@@ -148,6 +144,7 @@ class Carrito {
         await this.actualizarPrecios();
         // actualizar categorias
         this.actualizarCategorias();
+        console.log('Nuevo carrito: ' + JSON.stringify(updatedProducts));
     }
 
     /**
@@ -226,39 +223,43 @@ const carrito = new Carrito();
 const runQueries = async () => {
     // crea nuevo producto en el carrito
     await carrito.agregarProducto('WE328NJ', 2);
-
+    console.log('================================================');
     // actualiza la cantidad del producto en el carrito
     await carrito.agregarProducto('WE328NJ', 4);
-
+    console.log('================================================');
     // error. no se encuentra el product en la base de datos
     await carrito.agregarProducto('WE328NJdummy', 2);
+    console.log('================================================');
 
     // reduce la cantidad del producto en 2
     carrito
         .eliminarProducto('WE328NJ', 2)
         .then((cart) => {
-            console.log('Nuevo carrito:' + JSON.stringify(cart));
+            // console.log('Nuevo carrito:' + JSON.stringify(cart));
         })
         .catch((err) => console.log(err));
     await new Promise((resolve) => setTimeout(resolve, 1000));
+    console.log('================================================');
 
     // elimina el producto del carrito
     carrito
         .eliminarProducto('WE328NJ', 20)
         .then((cart) => {
-            console.log('Nuevo carrito:' + JSON.stringify(cart));
+            // console.log('Nuevo carrito:' + JSON.stringify(cart));
         })
         .catch((err) => console.log(err));
     await new Promise((resolve) => setTimeout(resolve, 1000));
+    console.log('================================================');
 
     // error. no se encuentra el producto en el carrito
     carrito
         .eliminarProducto('KS944RUR', 2)
         .then((cart) => {
-            console.log('Nuevo carrito:' + JSON.stringify(cart));
+            // console.log('Nuevo carrito:' + JSON.stringify(cart));
         })
         .catch((err) => console.log(err));
     await new Promise((resolve) => setTimeout(resolve, 1000));
+    console.log('================================================');
 
     // error. no se encuentra el producto en la base de datos
     carrito
